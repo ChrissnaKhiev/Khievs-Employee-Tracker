@@ -1,26 +1,22 @@
 const inquirer = require('inquirer');
-const express = require('express');
 const mysql = require('mysql2');
 require('dotenv').config();
-
-const app = express();
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+require('console.table');
 
 const db = mysql.createConnection(
     {
       host: 'localhost',
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
-    }
-  ).promise();
+      user: 'root',
+      password: 'Kirby101$',
+      database: 'employee_db'
+    },
+    console.log("Connected to mysql.")
+  );
 const menu = [
     {
         type: 'list',
         message: "What would you like to do?",
-        choices: ['Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department'],
+        choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department'],
         name: 'choice'
     }
 ]
@@ -30,24 +26,6 @@ const departmentBuild = [
         message: "What is the name of the department?",
         name: 'name'
     }
-]
-const roleBuild = [
-    {
-        type: 'input',
-        message: "What is the name of the role?",
-        name: 'title'
-    },
-    {
-        type: 'input',
-        message: "What is the salary of the role?",
-        name: 'salary'
-    },
-    {
-        type: 'list',
-        message: "What department does the role belong to?",
-        choices: [`SELECT name FROM department`],
-        name: 'department'
-    },
 ]
 const employeeBuild = [
     {
@@ -74,6 +52,27 @@ const employeeBuild = [
     }
 ]
 
+function viewEmployees() {
+    const sql = `
+SELECT 
+    e.id, 
+    e.first_name, 
+    e.last_name, 
+    r.title, 
+    d.name AS department, 
+    r.salary,
+    CONCAT (m.first_name, " ", m.last_name) AS manager
+FROM employee e 
+LEFT JOIN role r ON e.role_id = r.id 
+LEFT JOIN department d ON r.department_id = d.id
+LEFT JOIN employee m ON e.manager_id = m.id;`;
+    db.query(sql, (err, res) => {
+        if (err) {return err;}
+        else {console.table(res);}
+        init();
+    });
+}
+
 function addEmployee() {
     inquirer.prompt(employeeBuild)
     .then((data) => {
@@ -88,13 +87,37 @@ function addEmployee() {
 }
 
 function viewRoles() {
-    db.query('SELECT * FROM role', (err, res) => {
-        if (err) return res.json({error: err});
+    const sql = `SELECT * FROM role`;
+    db.query(sql, (err, res) => {
+        if (err) {return err;}
+        else {console.table(res);}
+        init();
     });
 }
 
 function addRole() {
-    inquirer.prompt(roleBuild)
+    const departmentChoices = async () => {
+        const departments = await db.query('SELECT id AS value, name FROM department');
+        return departments;
+    };
+    inquirer.prompt([
+        {
+            type: 'input',
+            message: "What is the name of the role?",
+            name: 'title'
+        },
+        {
+            type: 'input',
+            message: "What is the salary of the role?",
+            name: 'salary'
+        },
+        {
+            type: 'list',
+            message: "What department does the role belong to?",
+            choices: [departmentChoices()],
+            name: 'department'
+        },
+    ])
     .then((data) => {
         const title = data.title;
         const salary = data.salary;
@@ -106,8 +129,11 @@ function addRole() {
 }
 
 function viewDepartments() {
-    db.query('SELECT * FROM department', (err, res) => {
-        if (err) return res.json({error: err});
+    const sql = `SELECT * FROM department`;
+    db.query(sql, (err, res) => {
+        if (err) {return err;}
+        else {console.table(res);}
+        init();
     });
 }
 
@@ -115,16 +141,20 @@ function addDepartment() {
     inquirer.prompt(departmentBuild)
     .then((data) => {
         const name = data.name;
-        db.query('INSERT INTO employee (name) VALUES (?)', [name], (err, res) => {
-            if (err) return res.json({error: err});
+        db.query('INSERT INTO department (name) VALUES (?)', [name], (err, res) => {
+            if (err) return res.json({error: err})
+            else console.log(res.json);
         });
     })
 }
 
-async function init() {
-    await inquirer.prompt(menu)
+function init() {
+    inquirer.prompt(menu)
     .then((data) => {
         switch(data.choice){
+            case 'View All Employees':
+                viewEmployees();
+                break;
             case 'Add Employee':
                 addEmployee();
                 break;
