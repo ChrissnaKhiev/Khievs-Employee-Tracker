@@ -22,5 +22,5 @@ CREATE TABLE employee (
     role_id INT, FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE SET NULL,
     manager_id INT, FOREIGN KEY (manager_id) REFERENCES employee(id) ON DELETE SET NULL
 );
+
 SOURCE db/seeds.sql;
-INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('test', 'test', 1, 1);
